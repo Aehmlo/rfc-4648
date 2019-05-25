@@ -3,6 +3,12 @@ name = "rfc-4648"
 version = "0.1.0"
 authors = ["Alex Hamilton <alex.hamilton@ou.edu>"]
 edition = "2018"
+description = "Implementation of RFC 4648."
+homepage = "https://github.com/Aehmlo/rfc-4648"
+readme = "README.md"
+keywords = ["base16", "base32", "base32hex", "base64"]
+categories = ["algorithms", "compression", "encoding"]
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 bitvec = "0.11.1"
