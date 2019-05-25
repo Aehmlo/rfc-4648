@@ -10,5 +10,8 @@ keywords = ["base16", "base32", "base32hex", "base64"]
 categories = ["algorithms", "compression", "encoding"]
 license = "MIT OR Apache-2.0"
 
+[badges]
+travis-ci = { repository = "Aehmlo/rfc-4226" }
+
 [dependencies]
 bitvec = "0.11.1"
