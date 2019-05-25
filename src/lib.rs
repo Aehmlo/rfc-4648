@@ -102,6 +102,60 @@ impl Encoding {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+enum DecodeError {
+    /// The given string does not have a correct length for the specified encoding.
+    InvalidLength,
+    /// A character not in the "alphabet" of possible output characters for the desired encoding
+    /// was encountered.
+    UnknownCharacter,
+    /// A non-UTF-8 byte sequence was encountered and so the output could not be converted to a
+    /// `String`. If this error is encountered, [`decode_bytes`](fn.decode_bytes.html) is likely
+    /// the way forward.
+    NonUtf8,
+}
+
+impl From<std::string::FromUtf8Error> for DecodeError {
+    fn from(_: std::string::FromUtf8Error) -> Self {
+        DecodeError::NonUtf8
+    }
+}
+
+fn decode_bytes<S: AsRef<str>>(encoding: Encoding, s: S) -> Result<Vec<u8>, DecodeError> {
+    let s = s.as_ref();
+    let s = if let Some(pad) = encoding.padding() {
+        s.replace(pad, "")
+    } else {
+        s.to_string()
+    };
+    let alphabet = encoding.alphabet();
+    let indices = s
+        .chars()
+        .map(|c| alphabet.chars().position(|e| e == c))
+        .collect::<Vec<_>>();
+    if indices.iter().any(Option::is_none) {
+        return Err(DecodeError::UnknownCharacter);
+    }
+    // Let's hope the optimizer is cleverer than I am (likely)
+    let indices = indices
+        .into_iter()
+        .filter_map(|e| e.map(|v| v as u8))
+        .collect::<Vec<_>>();
+    let bits: &[u8] = &indices;
+    let bits: &BitSlice<BigEndian, u8> = BitSlice::from_slice(bits);
+    let chunk_size = encoding.chunk_size();
+    Ok(bits
+        .chunks(8)
+        .flat_map(|chunk| (&chunk[(8 - chunk_size)..]).into_iter())
+        .collect::<BitVec<BigEndian>>()
+        .into_vec())
+}
+
+fn decode_str<S: AsRef<str>>(encoding: Encoding, s: S) -> Result<String, DecodeError> {
+    let bytes = decode_bytes(encoding, s)?;
+    String::from_utf8(bytes)?
+}
+
 fn encode_bytes<T: AsRef<BitSlice>>(encoding: Encoding, bits: T) -> String {
     let bits = bits.as_ref();
     let chunks = bits.chunks(encoding.chunk_size());
@@ -177,5 +231,9 @@ mod tests {
         assert_eq!(encode_str(Encoding::Base64, "foob"), "Zm9vYg==");
         assert_eq!(encode_str(Encoding::Base64, "fooba"), "Zm9vYmE=");
         assert_eq!(encode_str(Encoding::Base64, "foobar"), "Zm9vYmFy");
+    }
+    #[test]
+    fn round_trip() {
+        assert_eq!(decode_str(Encoding::Base64, encode_str(Encoding::Base64, "foo")), Ok(String::from("foo")));
     }
 }
