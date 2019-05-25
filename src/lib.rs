@@ -153,7 +153,10 @@ fn decode_bytes<S: AsRef<str>>(encoding: Encoding, s: S) -> Result<Vec<u8>, Deco
 
 fn decode_str<S: AsRef<str>>(encoding: Encoding, s: S) -> Result<String, DecodeError> {
     let bytes = decode_bytes(encoding, s)?;
-    String::from_utf8(bytes)?
+    let s = String::from_utf8(bytes)?;
+    let nul = char::from(0);
+    let trimmed = s.trim_end_matches(nul);
+    Ok(trimmed.to_string())
 }
 
 fn encode_bytes<T: AsRef<BitSlice>>(encoding: Encoding, bits: T) -> String {
