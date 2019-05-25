@@ -234,6 +234,21 @@ mod tests {
     }
     #[test]
     fn round_trip() {
-        assert_eq!(decode_str(Encoding::Base64, encode_str(Encoding::Base64, "foo")), Ok(String::from("foo")));
+        assert_eq!(
+            decode_str(Encoding::Base16, encode_str(Encoding::Base16, "foo")),
+            Ok(String::from("foo"))
+        );
+        assert_eq!(
+            decode_str(Encoding::Base32, encode_str(Encoding::Base32, "foo")),
+            Ok(String::from("foo"))
+        );
+        assert_eq!(
+            decode_str(Encoding::Base32Hex, encode_str(Encoding::Base32Hex, "foo")),
+            Ok(String::from("foo"))
+        );
+        assert_eq!(
+            decode_str(Encoding::Base64, encode_str(Encoding::Base64, "foo")),
+            Ok(String::from("foo"))
+        );
     }
 }
