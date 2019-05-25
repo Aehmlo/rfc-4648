@@ -162,16 +162,22 @@ fn decode_str<S: AsRef<str>>(encoding: Encoding, s: S) -> Result<String, DecodeE
 fn encode_bytes<T: AsRef<BitSlice>>(encoding: Encoding, bits: T) -> String {
     let bits = bits.as_ref();
     let chunks = bits.chunks(encoding.chunk_size());
-    let indices = (0..encoding.chunk_size()).rev();
-    let numbered = chunks.map(|chunk| indices.clone().zip(chunk));
+    let numbered = chunks.map(|chunk| ((0..encoding.chunk_size()).rev()).zip(chunk));
     let f = |acc, (shift, val)| {
-        let bit = if val { 1 } else { 0 };
+        let bit = val as u8;
         let val = (bit << shift) as usize;
         acc + val
     };
     let indices = numbered.map(|chunk| chunk.fold(0, f));
-    let alphabet = encoding.alphabet().chars().collect::<Vec<_>>();
-    let mut s = indices.map(|index| alphabet[index]).collect::<String>();
+    let alphabet = encoding.alphabet();
+    let mut s = indices
+        .map(|index| {
+            alphabet
+                .chars()
+                .nth(index)
+                .expect("Character index out of bounds.")
+        })
+        .collect::<String>();
     let chunks = encoding.min_chunks();
     let rem = s.len() % chunks;
     if rem != 0 {
