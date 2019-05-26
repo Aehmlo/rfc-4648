@@ -129,6 +129,9 @@ impl From<std::string::FromUtf8Error> for DecodeError {
 /// decoded payload.
 pub fn decode_bytes<S: AsRef<str>>(encoding: Encoding, s: S) -> Result<Vec<u8>, DecodeError> {
     let s = s.as_ref();
+    if s.len() % encoding.min_chunks() != 0 {
+        return Err(DecodeError::InvalidLength);
+    }
     let s = if let Some(pad) = encoding.padding() {
         s.replace(pad, "")
     } else {
