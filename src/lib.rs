@@ -370,4 +370,58 @@ mod tests {
             Ok(String::from("foo"))
         );
     }
+    #[test]
+    fn invalid_base16() {
+        assert_eq!(
+            decode(Encoding::Base16, "ab"),
+            Err(DecodeError::UnknownCharacter)
+        );
+        assert_eq!(
+            decode(Encoding::Base16, "A"),
+            Err(DecodeError::InvalidLength)
+        );
+        assert_eq!(decode(Encoding::Base16, "80"), Err(DecodeError::NonUtf8));
+    }
+    #[test]
+    fn invalid_base32() {
+        assert_eq!(
+            decode(Encoding::Base32, "abcdefgh"),
+            Err(DecodeError::UnknownCharacter)
+        );
+        assert_eq!(
+            decode(Encoding::Base32, "A"),
+            Err(DecodeError::InvalidLength)
+        );
+        assert_eq!(
+            decode(Encoding::Base32, "QA======"),
+            Err(DecodeError::NonUtf8)
+        );
+    }
+    #[test]
+    fn invalid_base32_hex() {
+        assert_eq!(
+            decode(Encoding::Base32Hex, "abcdefgh"),
+            Err(DecodeError::UnknownCharacter)
+        );
+        assert_eq!(
+            decode(Encoding::Base32Hex, "A"),
+            Err(DecodeError::InvalidLength)
+        );
+        assert_eq!(
+            decode(Encoding::Base32Hex, "G0======"),
+            Err(DecodeError::NonUtf8)
+        );
+    }
+    #[test]
+    fn invalid_base64() {
+        assert_eq!(
+            decode(Encoding::Base64, "####"),
+            Err(DecodeError::UnknownCharacter)
+        );
+        assert_eq!(
+            decode(Encoding::Base64, "A"),
+            Err(DecodeError::InvalidLength)
+        );
+        assert_eq!(decode(Encoding::Base64, "gA=="), Err(DecodeError::NonUtf8));
+    }
 }
