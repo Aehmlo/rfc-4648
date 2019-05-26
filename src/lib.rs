@@ -233,6 +233,20 @@ mod tests {
         assert_eq!(encode(Encoding::Base16, "foob"), "666F6F62");
         assert_eq!(encode(Encoding::Base16, "fooba"), "666F6F6261");
         assert_eq!(encode(Encoding::Base16, "foobar"), "666F6F626172");
+
+        assert_eq!(decode(Encoding::Base16, ""), Ok("".to_string()));
+        assert_eq!(decode(Encoding::Base16, "66"), Ok("f".to_string()));
+        assert_eq!(decode(Encoding::Base16, "666F"), Ok("fo".to_string()));
+        assert_eq!(decode(Encoding::Base16, "666F6F"), Ok("foo".to_string()));
+        assert_eq!(decode(Encoding::Base16, "666F6F62"), Ok("foob".to_string()));
+        assert_eq!(
+            decode(Encoding::Base16, "666F6F6261"),
+            Ok("fooba".to_string())
+        );
+        assert_eq!(
+            decode(Encoding::Base16, "666F6F626172"),
+            Ok("foobar".to_string())
+        );
     }
     #[test]
     fn rfc_base32_test_vectors() {
@@ -243,6 +257,20 @@ mod tests {
         assert_eq!(encode(Encoding::Base32, "foob"), "MZXW6YQ=");
         assert_eq!(encode(Encoding::Base32, "fooba"), "MZXW6YTB");
         assert_eq!(encode(Encoding::Base32, "foobar"), "MZXW6YTBOI======");
+
+        assert_eq!(decode(Encoding::Base32, ""), Ok("".to_string()));
+        assert_eq!(decode(Encoding::Base32, "MY======"), Ok("f".to_string()));
+        assert_eq!(decode(Encoding::Base32, "MZXQ===="), Ok("fo".to_string()));
+        assert_eq!(decode(Encoding::Base32, "MZXW6==="), Ok("foo".to_string()));
+        assert_eq!(decode(Encoding::Base32, "MZXW6YQ="), Ok("foob".to_string()));
+        assert_eq!(
+            decode(Encoding::Base32, "MZXW6YTB"),
+            Ok("fooba".to_string())
+        );
+        assert_eq!(
+            decode(Encoding::Base32, "MZXW6YTBOI======"),
+            Ok("foobar".to_string())
+        );
     }
     #[test]
     fn rfc_base32_hex_test_vectors() {
@@ -253,6 +281,29 @@ mod tests {
         assert_eq!(encode(Encoding::Base32Hex, "foob"), "CPNMUOG=");
         assert_eq!(encode(Encoding::Base32Hex, "fooba"), "CPNMUOJ1");
         assert_eq!(encode(Encoding::Base32Hex, "foobar"), "CPNMUOJ1E8======");
+
+        assert_eq!(decode(Encoding::Base32Hex, ""), Ok("".to_string()));
+        assert_eq!(decode(Encoding::Base32Hex, "CO======"), Ok("f".to_string()));
+        assert_eq!(
+            decode(Encoding::Base32Hex, "CPNG===="),
+            Ok("fo".to_string())
+        );
+        assert_eq!(
+            decode(Encoding::Base32Hex, "CPNMU==="),
+            Ok("foo".to_string())
+        );
+        assert_eq!(
+            decode(Encoding::Base32Hex, "CPNMUOG="),
+            Ok("foob".to_string())
+        );
+        assert_eq!(
+            decode(Encoding::Base32Hex, "CPNMUOJ1"),
+            Ok("fooba".to_string())
+        );
+        assert_eq!(
+            decode(Encoding::Base32Hex, "CPNMUOJ1E8======"),
+            Ok("foobar".to_string())
+        );
     }
     #[test]
     fn rfc_base64_test_vectors() {
@@ -263,6 +314,20 @@ mod tests {
         assert_eq!(encode(Encoding::Base64, "foob"), "Zm9vYg==");
         assert_eq!(encode(Encoding::Base64, "fooba"), "Zm9vYmE=");
         assert_eq!(encode(Encoding::Base64, "foobar"), "Zm9vYmFy");
+
+        assert_eq!(decode(Encoding::Base64, ""), Ok("".to_string()));
+        assert_eq!(decode(Encoding::Base64, "Zg=="), Ok("f".to_string()));
+        assert_eq!(decode(Encoding::Base64, "Zm8="), Ok("fo".to_string()));
+        assert_eq!(decode(Encoding::Base64, "Zm9v"), Ok("foo".to_string()));
+        assert_eq!(decode(Encoding::Base64, "Zm9vYg=="), Ok("foob".to_string()));
+        assert_eq!(
+            decode(Encoding::Base64, "Zm9vYmE="),
+            Ok("fooba".to_string())
+        );
+        assert_eq!(
+            decode(Encoding::Base64, "Zm9vYmFy"),
+            Ok("foobar".to_string())
+        );
     }
     #[test]
     fn round_trip() {
