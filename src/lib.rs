@@ -34,12 +34,34 @@
 
 use bitvec::prelude::*;
 
+/// Encoding type.
+///
+/// [RFC 4648][4648] specicifies the base16, base32, base32hex, and base64 encodings.
+///
+/// [4648]: https://tools.ietf.org/html/rfc4648
+// Clippy doesn't like the shared "Base" prefix, so disable that lint here.
 #[allow(clippy::pub_enum_variant_names)]
 #[derive(Clone, Copy, Debug)]
 pub enum Encoding {
+    /// The base16 encoding (sometimes informally referred to as "hexadecimal").
+    ///
+    /// This encoding uses the typical 16-character (uppercase) hexadecimal "alphabet."
     Base16,
+    /// The base32 encoding.
+    ///
+    /// This encoding uses a 32-character "alphabet."
     Base32,
+    /// The base32hex encoding.
+    ///
+    /// This encoding is similar to [the base32 encoding](base32), with the additional feature of
+    /// preserving lexicographic sort order; that is, encoded strings sort lexicographically in the
+    /// same order as their corresponding source strings.
+    ///
+    /// [base32]: #variant.Base32
     Base32Hex,
+    /// The base64 encoding.
+    ///
+    /// This encoding uses a 64-character "alphabet."
     Base64,
 }
 
@@ -124,7 +146,7 @@ impl From<std::string::FromUtf8Error> for DecodeError {
 
 /// Attempts to decode an encoded string to a vector of bytes.
 ///
-/// # Notes
+/// ## Notes
 /// Unlike [`decode`](fn.decode.html), this function *does not* trim null bytes from the end of the
 /// decoded payload.
 pub fn decode_bytes<S: AsRef<str>>(encoding: Encoding, s: S) -> Result<Vec<u8>, DecodeError> {
@@ -199,9 +221,9 @@ fn encode_raw<T: AsRef<BitSlice>>(encoding: Encoding, bits: T) -> String {
 
 /// Encode arbitrary data in the specified encoding.
 ///
-/// # Non-UTF-8 data
+/// ## Non-UTF-8 data
 ///
-/// Due to the nature of the encodings in the RFC, the data does not have to be valid UTF-8, just a
+/// Due to the nature of the encodings in the RFC, the data do not have to be valid UTF-8, just a
 /// bunch of bytes.
 /// However, care must be taken when decoding the data again; if using this crate, be sure to use
 /// `decode_bytes`, which does not attempt any UTF-8 conversions, instead of `decode`, which does.
