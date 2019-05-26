@@ -102,8 +102,9 @@ impl Encoding {
     }
 }
 
+/// An error encountered while decoding.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-enum DecodeError {
+pub enum DecodeError {
     /// The given string does not have a correct length for the specified encoding.
     InvalidLength,
     /// A character not in the "alphabet" of possible output characters for the desired encoding
@@ -121,7 +122,12 @@ impl From<std::string::FromUtf8Error> for DecodeError {
     }
 }
 
-fn decode_bytes<S: AsRef<str>>(encoding: Encoding, s: S) -> Result<Vec<u8>, DecodeError> {
+/// Attempts to decode an encoded string to a vector of bytes.
+///
+/// # Notes
+/// Unlike [`decode`](fn.decode.html), this function *does not* trim null bytes from the end of the
+/// decoded payload.
+pub fn decode_bytes<S: AsRef<str>>(encoding: Encoding, s: S) -> Result<Vec<u8>, DecodeError> {
     let s = s.as_ref();
     let s = if let Some(pad) = encoding.padding() {
         s.replace(pad, "")
@@ -151,7 +157,10 @@ fn decode_bytes<S: AsRef<str>>(encoding: Encoding, s: S) -> Result<Vec<u8>, Deco
         .into_vec())
 }
 
-fn decode_str<S: AsRef<str>>(encoding: Encoding, s: S) -> Result<String, DecodeError> {
+/// Attempts to decode a string to a UTF-8 string, stripping any trailing null bytes.
+///
+/// For non-UTF-8 data, see [`decode_bytes`](fn.decode_bytes.html).
+pub fn decode<S: AsRef<str>>(encoding: Encoding, s: S) -> Result<String, DecodeError> {
     let bytes = decode_bytes(encoding, s)?;
     let s = String::from_utf8(bytes)?;
     let nul = char::from(0);
@@ -159,7 +168,7 @@ fn decode_str<S: AsRef<str>>(encoding: Encoding, s: S) -> Result<String, DecodeE
     Ok(trimmed.to_string())
 }
 
-fn encode_bytes<T: AsRef<BitSlice>>(encoding: Encoding, bits: T) -> String {
+fn encode_raw<T: AsRef<BitSlice>>(encoding: Encoding, bits: T) -> String {
     let bits = bits.as_ref();
     let chunks = bits.chunks(encoding.chunk_size());
     let numbered = chunks.map(|chunk| ((0..encoding.chunk_size()).rev()).zip(chunk));
@@ -188,10 +197,24 @@ fn encode_bytes<T: AsRef<BitSlice>>(encoding: Encoding, bits: T) -> String {
     s
 }
 
-pub fn encode_str<S: AsRef<str>>(encoding: Encoding, s: S) -> String {
+/// Encode arbitrary data in the specified encoding.
+///
+/// # Non-UTF-8 data
+///
+/// Due to the nature of the encodings in the RFC, the data does not have to be valid UTF-8, just a
+/// bunch of bytes.
+/// However, care must be taken when decoding the data again; if using this crate, be sure to use
+/// `decode_bytes`, which does not attempt any UTF-8 conversions, instead of `decode`, which does.
+pub fn encode_bytes<T: AsRef<[u8]>>(encoding: Encoding, payload: T) -> String {
+    let vec: BitVec<BigEndian, _> = BitVec::from_slice(payload.as_ref());
+    encode_raw(encoding, vec)
+}
+
+/// Encodes a UTF-8 string using the specified encoding.
+pub fn encode<S: AsRef<str>>(encoding: Encoding, s: S) -> String {
     let s = s.as_ref();
     let bytes = s.bytes().collect::<Vec<_>>();
-    let bytes: BitVec<_, _> = bytes.into();
+    let bytes: BitVec<BigEndian, _> = bytes.into();
     encode_bytes(encoding, bytes)
 }
 
@@ -200,63 +223,60 @@ mod tests {
     use super::*;
     #[test]
     fn rfc_base16_test_vectors() {
-        assert_eq!(encode_str(Encoding::Base16, ""), "");
-        assert_eq!(encode_str(Encoding::Base16, "f"), "66");
-        assert_eq!(encode_str(Encoding::Base16, "fo"), "666F");
-        assert_eq!(encode_str(Encoding::Base16, "foo"), "666F6F");
-        assert_eq!(encode_str(Encoding::Base16, "foob"), "666F6F62");
-        assert_eq!(encode_str(Encoding::Base16, "fooba"), "666F6F6261");
-        assert_eq!(encode_str(Encoding::Base16, "foobar"), "666F6F626172");
+        assert_eq!(encode(Encoding::Base16, ""), "");
+        assert_eq!(encode(Encoding::Base16, "f"), "66");
+        assert_eq!(encode(Encoding::Base16, "fo"), "666F");
+        assert_eq!(encode(Encoding::Base16, "foo"), "666F6F");
+        assert_eq!(encode(Encoding::Base16, "foob"), "666F6F62");
+        assert_eq!(encode(Encoding::Base16, "fooba"), "666F6F6261");
+        assert_eq!(encode(Encoding::Base16, "foobar"), "666F6F626172");
     }
     #[test]
     fn rfc_base32_test_vectors() {
-        assert_eq!(encode_str(Encoding::Base32, ""), "");
-        assert_eq!(encode_str(Encoding::Base32, "f"), "MY======");
-        assert_eq!(encode_str(Encoding::Base32, "fo"), "MZXQ====");
-        assert_eq!(encode_str(Encoding::Base32, "foo"), "MZXW6===");
-        assert_eq!(encode_str(Encoding::Base32, "foob"), "MZXW6YQ=");
-        assert_eq!(encode_str(Encoding::Base32, "fooba"), "MZXW6YTB");
-        assert_eq!(encode_str(Encoding::Base32, "foobar"), "MZXW6YTBOI======");
+        assert_eq!(encode(Encoding::Base32, ""), "");
+        assert_eq!(encode(Encoding::Base32, "f"), "MY======");
+        assert_eq!(encode(Encoding::Base32, "fo"), "MZXQ====");
+        assert_eq!(encode(Encoding::Base32, "foo"), "MZXW6===");
+        assert_eq!(encode(Encoding::Base32, "foob"), "MZXW6YQ=");
+        assert_eq!(encode(Encoding::Base32, "fooba"), "MZXW6YTB");
+        assert_eq!(encode(Encoding::Base32, "foobar"), "MZXW6YTBOI======");
     }
     #[test]
     fn rfc_base32_hex_test_vectors() {
-        assert_eq!(encode_str(Encoding::Base32Hex, ""), "");
-        assert_eq!(encode_str(Encoding::Base32Hex, "f"), "CO======");
-        assert_eq!(encode_str(Encoding::Base32Hex, "fo"), "CPNG====");
-        assert_eq!(encode_str(Encoding::Base32Hex, "foo"), "CPNMU===");
-        assert_eq!(encode_str(Encoding::Base32Hex, "foob"), "CPNMUOG=");
-        assert_eq!(encode_str(Encoding::Base32Hex, "fooba"), "CPNMUOJ1");
-        assert_eq!(
-            encode_str(Encoding::Base32Hex, "foobar"),
-            "CPNMUOJ1E8======"
-        );
+        assert_eq!(encode(Encoding::Base32Hex, ""), "");
+        assert_eq!(encode(Encoding::Base32Hex, "f"), "CO======");
+        assert_eq!(encode(Encoding::Base32Hex, "fo"), "CPNG====");
+        assert_eq!(encode(Encoding::Base32Hex, "foo"), "CPNMU===");
+        assert_eq!(encode(Encoding::Base32Hex, "foob"), "CPNMUOG=");
+        assert_eq!(encode(Encoding::Base32Hex, "fooba"), "CPNMUOJ1");
+        assert_eq!(encode(Encoding::Base32Hex, "foobar"), "CPNMUOJ1E8======");
     }
     #[test]
     fn rfc_base64_test_vectors() {
-        assert_eq!(encode_str(Encoding::Base64, ""), "");
-        assert_eq!(encode_str(Encoding::Base64, "f"), "Zg==");
-        assert_eq!(encode_str(Encoding::Base64, "fo"), "Zm8=");
-        assert_eq!(encode_str(Encoding::Base64, "foo"), "Zm9v");
-        assert_eq!(encode_str(Encoding::Base64, "foob"), "Zm9vYg==");
-        assert_eq!(encode_str(Encoding::Base64, "fooba"), "Zm9vYmE=");
-        assert_eq!(encode_str(Encoding::Base64, "foobar"), "Zm9vYmFy");
+        assert_eq!(encode(Encoding::Base64, ""), "");
+        assert_eq!(encode(Encoding::Base64, "f"), "Zg==");
+        assert_eq!(encode(Encoding::Base64, "fo"), "Zm8=");
+        assert_eq!(encode(Encoding::Base64, "foo"), "Zm9v");
+        assert_eq!(encode(Encoding::Base64, "foob"), "Zm9vYg==");
+        assert_eq!(encode(Encoding::Base64, "fooba"), "Zm9vYmE=");
+        assert_eq!(encode(Encoding::Base64, "foobar"), "Zm9vYmFy");
     }
     #[test]
     fn round_trip() {
         assert_eq!(
-            decode_str(Encoding::Base16, encode_str(Encoding::Base16, "foo")),
+            decode(Encoding::Base16, encode(Encoding::Base16, "foo")),
             Ok(String::from("foo"))
         );
         assert_eq!(
-            decode_str(Encoding::Base32, encode_str(Encoding::Base32, "foo")),
+            decode(Encoding::Base32, encode(Encoding::Base32, "foo")),
             Ok(String::from("foo"))
         );
         assert_eq!(
-            decode_str(Encoding::Base32Hex, encode_str(Encoding::Base32Hex, "foo")),
+            decode(Encoding::Base32Hex, encode(Encoding::Base32Hex, "foo")),
             Ok(String::from("foo"))
         );
         assert_eq!(
-            decode_str(Encoding::Base64, encode_str(Encoding::Base64, "foo")),
+            decode(Encoding::Base64, encode(Encoding::Base64, "foo")),
             Ok(String::from("foo"))
         );
     }
